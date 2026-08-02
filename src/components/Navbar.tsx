@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dna, Moon, Sun, User, Globe, ChevronDown, Check, Search } from 'lucide-react';
+import { Dna, Moon, Sun, User, Globe, ChevronDown, Check, Search, LogOut, LayoutDashboard } from 'lucide-react';
 import { EducationLevel } from '../types';
 import { useLanguage, SUPPORTED_LANGUAGES } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   darkMode: boolean;
@@ -72,6 +73,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       }
     }, 100);
   };
+
+  const { user, userProfile, logoutUser } = useAuth();
 
   return (
     <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${
@@ -229,24 +232,66 @@ export const Navbar: React.FC<NavbarProps> = ({
             {darkMode ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
           </button>
 
-          {/* Login Button */}
-          {currentView === 'landing' ? (
-            <button
-              onClick={onOpenAuth}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-semibold shadow-sm transition-all transform active:scale-95"
-              id="login-nav-btn"
-            >
-              <User className="w-3.5 h-3.5 text-white" />
-              <span>{t('nav.login', 'Login')}</span>
-            </button>
+          {/* Auth State or Login Button */}
+          {user ? (
+            <div className="flex items-center gap-2">
+              {currentView === 'landing' ? (
+                <button
+                  onClick={() => setCurrentView('workspace')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-xs font-semibold transition-all border border-indigo-200 dark:border-indigo-800"
+                  id="nav-workspace-btn"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>Workspace</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setCurrentView('landing')}
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                  id="back-to-landing-btn"
+                >
+                  {t('nav.backToHome', 'Back to Home')}
+                </button>
+              )}
+
+              {/* User badge & logout */}
+              <div className="flex items-center gap-1.5 pl-1">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-200 font-medium">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="truncate max-w-[100px]" title={userProfile?.name || user.email || ''}>
+                    {userProfile?.name || user.displayName || user.email?.split('@')[0]}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => logoutUser()}
+                  className="p-1.5 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors border border-transparent hover:border-rose-200 dark:hover:border-rose-900"
+                  title="Sign Out"
+                  id="logout-nav-btn"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           ) : (
-            <button
-              onClick={() => setCurrentView('landing')}
-              className="px-3.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
-              id="back-to-landing-btn"
-            >
-              {t('nav.backToHome', 'Back to Home')}
-            </button>
+            currentView === 'landing' ? (
+              <button
+                onClick={onOpenAuth}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-semibold shadow-sm transition-all transform active:scale-95"
+                id="login-nav-btn"
+              >
+                <User className="w-3.5 h-3.5 text-white" />
+                <span>{t('nav.login', 'Login')}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentView('landing')}
+                className="px-3.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                id="back-to-landing-btn"
+              >
+                {t('nav.backToHome', 'Back to Home')}
+              </button>
+            )
           )}
 
         </div>

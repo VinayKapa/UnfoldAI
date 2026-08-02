@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profiles",
+      "description": "Registered user accounts and credentials details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User unique identifier" },
+        "name": { "type": "string", "description": "User full name" },
+        "email": { "type": "string", "description": "User email address" },
+        "educationLevel": { "type": "string", "description": "Student education level" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "lastLoginAt": { "type": "string", "format": "date-time", "description": "Last login timestamp" }
+      },
+      "required": ["uid", "email"]
+    },
+    "studentProfiles": {
+      "title": "Student Profiles",
+      "description": "Saved student assessments and career roadmap preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "name": { "type": "string", "description": "Student name" },
+        "educationLevel": { "type": "string", "description": "Education level" },
+        "gradeOrField": { "type": "string", "description": "Grade or field" },
+        "inputs": { "type": "object", "description": "User survey inputs" },
+        "careerDna": { "type": "object", "description": "Calculated Career DNA result" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["userId"]
+    }
+  }
+}

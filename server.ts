@@ -14,6 +14,14 @@ import { AdaptiveExperienceEngine } from './src/lib/adaptiveEngine.ts';
 import { defaultGraphInstance, StudentIntelligenceGraphEngine } from './src/lib/studentIntelligenceGraph.ts';
 import { defaultCareerCoreInstance } from './src/lib/careerIntelligenceCore.ts';
 
+import {
+  registerUserInDb,
+  loginUserInDb,
+  verifyUserToken,
+  saveProfileToDb,
+  loadProfileFromDb
+} from './src/lib/authServer.ts';
+
 const serverDir = typeof __dirname !== 'undefined'
   ? __dirname
   : (typeof import.meta !== 'undefined' && import.meta.url ? path.dirname(fileURLToPath(import.meta.url)) : process.cwd());
@@ -44,6 +52,109 @@ function getAiClient(): GoogleGenAI {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// =======================================================
+// AUTHENTICATION & DATABASE APIS (POSTGRESQL ON CLOUD SQL)
+// =======================================================
+
+// Register User Endpoint
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, email, password, educationLevel } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required.' });
+    }
+    const result = await registerUserInDb(name, email, password, educationLevel);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Registration failed.' });
+  }
+});
+
+// Login User Endpoint
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+    const result = await loginUserInDb(email, password);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Login failed.' });
+  }
+});
+
+// Get Current Logged-in User Profile
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized: Missing token' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    const userPayload = verifyUserToken(token);
+    res.json({ user: userPayload });
+  } catch (err: any) {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+});
+
+// Save Student Profile to PostgreSQL
+app.post('/api/user/profile', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized: Missing token' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    const userPayload = verifyUserToken(token);
+
+    const { profile, careerDna } = req.body;
+    await saveProfileToDb(userPayload.uid, {
+      name: profile?.name || userPayload.name,
+      educationLevel: profile?.educationLevel || userPayload.educationLevel || 'graduation',
+      gradeOrField: profile?.gradeOrField || '',
+      inputs: profile?.inputs || {},
+      careerDna: careerDna || {},
+    });
+
+    res.json({ status: 'ok', message: 'Profile saved to database successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to save profile' });
+  }
+});
+
+// Load Student Profile from PostgreSQL
+app.get('/api/user/profile', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized: Missing token' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    const userPayload = verifyUserToken(token);
+
+    const profileRecord = await loadProfileFromDb(userPayload.uid);
+    if (!profileRecord) {
+      return res.json({ profile: null, careerDna: null });
+    }
+
+    res.json({
+      profile: {
+        name: profileRecord.name || userPayload.name,
+        educationLevel: profileRecord.educationLevel || 'graduation',
+        gradeOrField: profileRecord.gradeOrField || '',
+        inputs: profileRecord.inputs || {},
+        qnaHistory: [],
+      },
+      careerDna: profileRecord.careerDna || null,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to load profile' });
+  }
+});
+
 
 // =======================================================
 // CAREERDNA DECISION ENGINE APIS (INDEPENDENT SERVICES)

@@ -20,8 +20,10 @@ import { PersonalWorkspace } from './components/PersonalWorkspace';
 import { Footer } from './components/Footer';
 import { EducationLevel, StudentProfile, CareerDnaResult } from './types';
 import { SAMPLE_PROFILES } from './data/mockData';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-export default function App() {
+function AppContent() {
+  const { user, saveProfileToDatabase, loadProfileFromDatabase } = useAuth();
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('careerdna_dark_mode');
     if (saved !== null) return saved === 'true';
@@ -69,10 +71,23 @@ export default function App() {
     }
   }, [darkMode]);
 
+  // Load user data from Firestore when user logs in
+  useEffect(() => {
+    if (user) {
+      loadProfileFromDatabase().then((saved) => {
+        if (saved) {
+          setStudentProfile(saved.profile);
+          setCareerDna(saved.careerDna);
+          setEducationLevel(saved.profile.educationLevel);
+        }
+      });
+    }
+  }, [user]);
+
   // When education level changes while on landing, sync default profile sample
   useEffect(() => {
     const matchedSample = SAMPLE_PROFILES.find((p) => p.level === educationLevel);
-    if (matchedSample && currentView === 'landing') {
+    if (matchedSample && currentView === 'landing' && !user) {
       setStudentProfile({
         name: matchedSample.name,
         educationLevel: matchedSample.level,
@@ -82,7 +97,7 @@ export default function App() {
       });
       setCareerDna(matchedSample.dna);
     }
-  }, [educationLevel, currentView]);
+  }, [educationLevel, currentView, user]);
 
   // Handle Live Demo Load
   const handleViewDemo = () => {
@@ -104,14 +119,16 @@ export default function App() {
     setEducationLevel(profile.educationLevel);
     setStudentProfile(profile);
 
-    if (resDna && resDna.topCareers && resDna.topCareers.length > 0) {
-      setCareerDna(resDna);
-    } else {
-      const matchedSample = SAMPLE_PROFILES.find((p) => p.level === profile.educationLevel) || SAMPLE_PROFILES[2];
-      setCareerDna(matchedSample.dna);
-    }
+    const finalDna = (resDna && resDna.topCareers && resDna.topCareers.length > 0)
+      ? resDna
+      : (SAMPLE_PROFILES.find((p) => p.level === profile.educationLevel) || SAMPLE_PROFILES[2]).dna;
 
+    setCareerDna(finalDna);
     setCurrentView('workspace');
+
+    if (user) {
+      saveProfileToDatabase(profile, finalDna);
+    }
   };
 
   return (
@@ -183,8 +200,14 @@ export default function App() {
           <PersonalWorkspace
             profile={studentProfile}
             careerDna={careerDna}
-            setProfile={setStudentProfile}
-            setCareerDna={setCareerDna}
+            setProfile={(newProf) => {
+              setStudentProfile(newProf);
+              if (user) saveProfileToDatabase(newProf, careerDna);
+            }}
+            setCareerDna={(newDna) => {
+              setCareerDna(newDna);
+              if (user) saveProfileToDatabase(studentProfile, newDna);
+            }}
             onOpenKnowYou={() => setIsKnowYouOpen(true)}
           />
         </div>
@@ -204,10 +227,9 @@ export default function App() {
         isOpen={isAuthOpen}
         initialMode={authInitialMode}
         onClose={() => setIsAuthOpen(false)}
-        onSuccess={(email) => {
+        onSuccess={() => {
           setIsAuthOpen(false);
-          // Auto launch onboarding / level selection for authenticated student
-          setIsKnowYouOpen(true);
+          setCurrentView('workspace');
         }}
       />
 
@@ -215,3 +237,10 @@ export default function App() {
   );
 }
 
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}

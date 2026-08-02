@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Mail, Lock, User, Eye, EyeOff, ArrowRight, CheckCircle2, KeyRound, ShieldCheck, Dna, ArrowLeft, Loader2, Globe } from 'lucide-react';
+import { X, Mail, Lock, User, Eye, EyeOff, ArrowRight, CheckCircle2, KeyRound, ShieldCheck, Dna } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -79,35 +80,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     return true;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { registerUser, loginUser, resetUserPassword } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsLoading(true);
     setErrorMessage('');
+    setSuccessMessage('');
 
-    setTimeout(() => {
-      setIsLoading(false);
-      if (mode === 'forgot') {
-        setSuccessMessage('Password reset code sent to your email!');
-        setTimeout(() => {
-          setSuccessMessage('');
-          setMode('reset');
-        }, 1500);
-      } else if (mode === 'reset') {
-        setSuccessMessage('Password updated successfully! Redirecting to login...');
-        setTimeout(() => {
-          setSuccessMessage('');
-          setMode('login');
-        }, 1500);
-      } else {
-        setSuccessMessage(mode === 'login' ? 'Login successful!' : 'Account created successfully!');
+    try {
+      if (mode === 'register') {
+        await registerUser(name, email, password);
+        setSuccessMessage('Account created and stored in database! Welcome to Unfold AI.');
         setTimeout(() => {
           onSuccess(email);
           onClose();
-        }, 1000);
+        }, 1200);
+      } else if (mode === 'login') {
+        await loginUser(email, password);
+        setSuccessMessage('Login successful! Loading your workspace from database...');
+        setTimeout(() => {
+          onSuccess(email);
+          onClose();
+        }, 1200);
+      } else if (mode === 'forgot') {
+        await resetUserPassword(email);
+        setSuccessMessage('Password reset email sent! Please check your inbox.');
+      } else if (mode === 'reset') {
+        setSuccessMessage('Password updated successfully!');
+        setTimeout(() => {
+          setMode('login');
+        }, 1200);
       }
-    }, 1200);
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      let msg = 'Authentication failed. Please try again.';
+      if (err.code === 'auth/email-already-in-use') {
+        msg = 'An account with this email address already exists. Please sign in instead.';
+      } else if (
+        err.code === 'auth/invalid-credential' ||
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password'
+      ) {
+        msg = 'Invalid email or password. Please check your credentials.';
+      } else if (err.code === 'auth/weak-password') {
+        msg = 'Password should be at least 6 characters.';
+      } else if (err.code === 'auth/invalid-email') {
+        msg = 'Please enter a valid email address.';
+      } else if (err.code === 'auth/too-many-requests') {
+        msg = 'Too many failed login attempts. Please try again later or reset your password.';
+      } else if (err.message) {
+        msg = err.message;
+      }
+      setErrorMessage(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
