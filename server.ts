@@ -14,23 +14,31 @@ import { AdaptiveExperienceEngine } from './src/lib/adaptiveEngine.ts';
 import { defaultGraphInstance, StudentIntelligenceGraphEngine } from './src/lib/studentIntelligenceGraph.ts';
 import { defaultCareerCoreInstance } from './src/lib/careerIntelligenceCore.ts';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const serverDir = typeof __dirname !== 'undefined'
+  ? __dirname
+  : (typeof import.meta !== 'undefined' && import.meta.url ? path.dirname(fileURLToPath(import.meta.url)) : process.cwd());
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
-// Initialize Google GenAI on server side
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
+// Lazy initializer for Google GenAI client
+let aiInstance: GoogleGenAI | null = null;
+function getAiClient(): GoogleGenAI {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY || '';
+    aiInstance = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
   }
-});
+  return aiInstance;
+}
 
 // Endpoint: Health check
 app.get('/api/health', (req, res) => {
@@ -809,7 +817,7 @@ STRICT TEXT FORMATTING RULE:
 - All text string properties MUST be pure, clean, plain English readable text.
 `;
 
-        const response = await ai.models.generateContent({
+        const response = await getAiClient().models.generateContent({
           model: 'gemini-3.6-flash',
           contents: prompt,
           config: {
@@ -989,7 +997,7 @@ Guidelines:
       `Student: ${message}`
     ].join('\n\n');
 
-    const response = await ai.models.generateContent({
+    const response = await getAiClient().models.generateContent({
       model: 'gemini-3.6-flash',
       contents,
       config: {
@@ -1067,7 +1075,7 @@ Evaluate against top company/tier-1 standards and return a JSON object with:
 - linkedInOptimization (2 actionable tips for LinkedIn & GitHub)
 `;
 
-    const response = await ai.models.generateContent({
+    const response = await getAiClient().models.generateContent({
       model: 'gemini-3.6-flash',
       contents: prompt,
       config: {

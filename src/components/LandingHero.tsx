@@ -288,10 +288,10 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
                   <line x1="110" y1="305" x2="110" y2="75" stroke="#334155" strokeWidth="1.5" strokeDasharray="5 5" />
 
                   {/* Central Diagonal Cross Connectors */}
-                  <line x1="110" y1="75" x2="300" y2="190" stroke={selectedStage === 'school' ? '#f59e0b' : '#334155'} strokeWidth={selectedStage === 'school' ? "2.5" : "1.5"} filter={selectedStage === 'school' ? "url(#glowEffect)" : undefined} strokeDasharray={selectedStage === 'school' ? undefined : "4 4"} />
-                  <line x1="490" y1="75" x2="300" y2="190" stroke={selectedStage === 'intermediate' ? '#6366f1' : '#334155'} strokeWidth={selectedStage === 'intermediate' ? "2.5" : "1.5"} filter={selectedStage === 'intermediate' ? "url(#glowEffect)" : undefined} strokeDasharray={selectedStage === 'intermediate' ? undefined : "4 4"} />
-                  <line x1="300" y1="190" x2="110" y2="305" stroke={selectedStage === 'graduation' ? '#10b981' : '#334155'} strokeWidth={selectedStage === 'graduation' ? "2.5" : "1.5"} filter={selectedStage === 'graduation' ? "url(#glowEffect)" : undefined} strokeDasharray={selectedStage === 'graduation' ? undefined : "4 4"} />
-                  <line x1="300" y1="190" x2="490" y2="305" stroke={selectedStage === 'graduation' ? '#06b6d4' : '#334155'} strokeWidth={selectedStage === 'graduation' ? "2.5" : "1.5"} filter={selectedStage === 'graduation' ? "url(#glowEffect)" : undefined} strokeDasharray={selectedStage === 'graduation' ? undefined : "4 4"} />
+                  <line x1="110" y1="75" x2="300" y2="190" stroke="#334155" strokeWidth="1.5" strokeDasharray="5 5" />
+                  <line x1="490" y1="75" x2="300" y2="190" stroke="#334155" strokeWidth="1.5" strokeDasharray="5 5" />
+                  <line x1="300" y1="190" x2="110" y2="305" stroke="#334155" strokeWidth="1.5" strokeDasharray="5 5" />
+                  <line x1="300" y1="190" x2="490" y2="305" stroke="#334155" strokeWidth="1.5" strokeDasharray="5 5" />
 
                   {/* Animated Traveling Pulses */}
                   <circle cx="205" cy="132" r="3" fill="#f59e0b" className="animate-ping" />

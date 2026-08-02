@@ -25,7 +25,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('careerdna_dark_mode');
     if (saved !== null) return saved === 'true';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false;
   });
   const [educationLevel, setEducationLevel] = useState<EducationLevel>('graduation');
   const [currentView, setCurrentView] = useState<'landing' | 'workspace'>('landing');
