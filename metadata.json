@@ -1,0 +1,6 @@
+{
+  "name": "Unfold AI",
+  "description": "An AI-powered Career Operating System for students to discover strengths, explore careers, and build personalized roadmaps.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unfold AI — Geometric Career Operating System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+      /* Hide all Google Translate banners, tooltips, frames, and popups */
+      .goog-te-banner-frame,
+      .goog-te-banner-frame.skiptranslate,
+      iframe.skiptranslate,
+      #goog-gt-tt,
+      .goog-te-spinner-pos,
+      .goog-te-gadget,
+      .goog-te-balloon-frame {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        height: 0 !important;
+        width: 0 !important;
+      }
+      body {
+        top: 0px !important;
+        position: static !important;
+      }
+      .goog-text-highlight {
+        background-color: transparent !important;
+        box-shadow: none !important;
+      }
+      /* Prevent font flashes or layout shifts during translation */
+      font {
+        background-color: transparent !important;
+        box-shadow: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="google_translate_element" style="display:none;"></div>
+    <div id="root"></div>
+
+    <script type="text/javascript">
+      (function() {
+        try {
+          var savedLang = localStorage.getItem('unfold_app_language');
+          if (!savedLang || savedLang === 'en') {
+            var host = window.location.hostname;
+            var domains = ['', host, '.' + host, window.location.host];
+            for (var i = 0; i < domains.length; i++) {
+              var d = domains[i];
+              var domainAttr = d ? '; domain=' + d : '';
+              document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/' + domainAttr;
+              document.cookie = 'googtrans=/en/en; path=/' + domainAttr;
+            }
+            document.documentElement.lang = 'en';
+            document.documentElement.dir = 'ltr';
+          }
+        } catch (e) {}
+      })();
+
+      function googleTranslateElementInit() {
+        if (window.google && window.google.translate) {
+          new window.google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,hi,te,ta,bn,mr,gu,kn,ml,es,fr,de,zh-CN,ja,ko,ar,pt,ru,it,tr,vi',
+            autoDisplay: false
+          }, 'google_translate_element');
+        }
+      }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

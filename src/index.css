@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg: #FAFAFA;
+    --text: #111827;
+    --primary: #4338CA;
+    --accent: #2563EB;
+    --border: #E5E7EB;
+    --muted: #6B7280;
+  }
+
+  .dark {
+    --bg: #020617;
+    --text: #F8FAFC;
+    --border: #1E293B;
+    --muted: #94A3B8;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .font-num {
+    font-family: 'Manrope', -apple-system, sans-serif;
+  }
+
+  .font-mono, code, pre, .status-pill {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Awwwards Precision Theme Helpers */
+.geo-card {
+  background: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.geo-card:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 20px 40px -15px rgba(79, 70, 229, 0.08);
+  transform: translateY(-2px);
+}
+
+.dark .geo-card {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+.dark .geo-card:hover {
+  border-color: #334155;
+  box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.15);
+}
+
+.geo-status-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: #EEF2FF;
+  color: #4F46E5;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid #E0E7FF;
+}
+
+.dark .geo-status-pill {
+  background: rgba(79, 70, 229, 0.2);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.geo-ai-insight {
+  background: #111827;
+  color: #9CA3AF;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  line-height: 1.5;
+}
+
+.geo-ai-insight span {
+  color: #ffffff;
+  font-weight: 700;
+}
