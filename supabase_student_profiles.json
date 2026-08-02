@@ -1,0 +1,67 @@
+[
+  {
+    "user_id": "usr_demo_school_01",
+    "name": "Aarav Sharma",
+    "education_level": "school",
+    "grade_or_field": "10th Standard (CBSE)",
+    "inputs": {
+      "favoriteSubjects": ["Mathematics", "Physics", "Computer Applications"],
+      "hobbies": ["Coding", "Robotics", "Chess"],
+      "learningStyle": "Visual & Hands-on Practical",
+      "ambition": "Wants to build intelligent AI robotics and space systems"
+    },
+    "career_dna": {
+      "overallScore": 94,
+      "primaryArchetype": "Analytical Innovator",
+      "topCareers": [
+        {
+          "title": "AI & Robotics Engineer",
+          "matchPercentage": 96,
+          "growthPotential": "High Growth (32% YoY)",
+          "averageSalary": "₹12,000,000 - ₹28,000,000 / year",
+          "description": "Design and build autonomous AI systems and hardware robotics.",
+          "requiredSkills": ["Python", "Mathematics", "ROS", "TensorFlow"],
+          "roadmap": [
+            "Finish 10th with focus on Math & Physics",
+            "Choose PCM in 11th & 12th CBSE/State Board",
+            "Prepare for JEE Mains & Advanced",
+            "Pursue B.Tech in Robotics / Artificial Intelligence / Computer Science"
+          ]
+        }
+      ]
+    },
+    "updated_at": "2026-08-02T01:30:00.000Z"
+  },
+  {
+    "user_id": "usr_demo_grad_03",
+    "name": "Rohan Mehta",
+    "education_level": "graduation",
+    "grade_or_field": "B.Tech Computer Science & Engineering",
+    "inputs": {
+      "currentDegree": "B.Tech CSE (3rd Year)",
+      "technicalSkills": ["React", "TypeScript", "Node.js", "Python", "SQL"],
+      "careerGoal": "Full Stack AI Product Engineer"
+    },
+    "career_dna": {
+      "overallScore": 92,
+      "primaryArchetype": "Full Stack Architect",
+      "topCareers": [
+        {
+          "title": "Senior AI Systems Engineer",
+          "matchPercentage": 95,
+          "growthPotential": "Exponential",
+          "averageSalary": "₹18,000,000 - ₹40,000,000 / year",
+          "description": "Architect scalable AI microservices and web application platforms.",
+          "requiredSkills": ["TypeScript", "PostgreSQL", "Supabase", "LLMs", "Docker"],
+          "roadmap": [
+            "Master Node.js, Express & Drizzle ORM / Supabase",
+            "Build full-stack AI SaaS applications with live database",
+            "Apply for SDE / Product Engineer internships",
+            "Transition into Full Stack AI Lead"
+          ]
+        }
+      ]
+    },
+    "updated_at": "2026-08-02T01:50:00.000Z"
+  }
+]

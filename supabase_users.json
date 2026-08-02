@@ -1,0 +1,38 @@
+[
+  {
+    "uid": "usr_demo_school_01",
+    "name": "Aarav Sharma",
+    "email": "aarav.sharma@example.com",
+    "password_hash": "$2a$10$E9sP/tJ8z3N4V8A9Q0R1Se1.23456789012345678901234567890",
+    "education_level": "school",
+    "created_at": "2026-08-01T10:00:00.000Z",
+    "last_login_at": "2026-08-02T01:30:00.000Z"
+  },
+  {
+    "uid": "usr_demo_undergrad_02",
+    "name": "Ananya Verma",
+    "email": "ananya.verma@example.com",
+    "password_hash": "$2a$10$E9sP/tJ8z3N4V8A9Q0R1Se1.23456789012345678901234567890",
+    "education_level": "intermediate",
+    "created_at": "2026-08-01T11:15:00.000Z",
+    "last_login_at": "2026-08-02T01:40:00.000Z"
+  },
+  {
+    "uid": "usr_demo_grad_03",
+    "name": "Rohan Mehta",
+    "email": "rohan.mehta@example.com",
+    "password_hash": "$2a$10$E9sP/tJ8z3N4V8A9Q0R1Se1.23456789012345678901234567890",
+    "education_level": "graduation",
+    "created_at": "2026-08-01T12:30:00.000Z",
+    "last_login_at": "2026-08-02T01:50:00.000Z"
+  },
+  {
+    "uid": "usr_demo_postgrad_04",
+    "name": "Priya Nair",
+    "email": "priya.nair@example.com",
+    "password_hash": "$2a$10$E9sP/tJ8z3N4V8A9Q0R1Se1.23456789012345678901234567890",
+    "education_level": "graduation",
+    "created_at": "2026-08-01T14:00:00.000Z",
+    "last_login_at": "2026-08-02T01:55:00.000Z"
+  }
+]

@@ -19,7 +19,8 @@ import {
   loginUserInDb,
   verifyUserToken,
   saveProfileToDb,
-  loadProfileFromDb
+  loadProfileFromDb,
+  seedDataToSupabase
 } from './src/lib/authServer.ts';
 
 const serverDir = typeof __dirname !== 'undefined'
@@ -125,7 +126,7 @@ app.post('/api/user/profile', async (req, res) => {
   }
 });
 
-// Load Student Profile from PostgreSQL
+// Load Student Profile from PostgreSQL / Supabase
 app.get('/api/user/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -152,6 +153,19 @@ app.get('/api/user/profile', async (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to load profile' });
+  }
+});
+
+// Seed JSON data directly into Supabase tables
+app.post('/api/supabase/seed', async (req, res) => {
+  try {
+    const result = await seedDataToSupabase();
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to seed data to Supabase' });
   }
 });
 

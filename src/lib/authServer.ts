@@ -19,71 +19,177 @@ export function generateUid(): string {
   return 'usr_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
 }
 
-// Register user in database (Supabase if configured, otherwise PostgreSQL)
+// Register user using Supabase Auth + Supabase Database "profiles" table
 export async function registerUserInDb(name: string, email: string, pass: string, eduLevel: string = 'graduation') {
   const normalizedEmail = email.trim().toLowerCase();
 
-  // If Supabase is configured via env vars, register in Supabase
+  if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    throw new Error('Please enter a valid email address.');
+  }
+
+  if (!pass || pass.length < 6) {
+    throw new Error('Password must be at least 6 characters.');
+  }
+
+  if (!name || !name.trim()) {
+    throw new Error('Please enter your full name.');
+  }
+
+  // Primary path: Supabase Authentication and Supabase Database
   if (isSupabaseConfigured() && (supabaseAdmin || supabase)) {
     const client = supabaseAdmin || supabase!;
 
-    // Check if user exists in Supabase
-    const { data: existingSupabaseUsers } = await client
-      .from('users')
-      .select('email')
-      .eq('email', normalizedEmail);
+    // 1. Check if email already exists in profiles or users tables before creating
+    try {
+      const { data: existingProfiles } = await client
+        .from('profiles')
+        .select('email')
+        .eq('email', normalizedEmail);
 
-    if (existingSupabaseUsers && existingSupabaseUsers.length > 0) {
-      throw new Error('An account with this email address already exists. Please sign in instead.');
+      if (existingProfiles && existingProfiles.length > 0) {
+        console.warn('[Supabase Registration] Email already exists in profiles table:', normalizedEmail);
+        throw new Error('An account with this email address already exists. Please sign in instead.');
+      }
+
+      const { data: existingUsers } = await client
+        .from('users')
+        .select('email')
+        .eq('email', normalizedEmail);
+
+      if (existingUsers && existingUsers.length > 0) {
+        console.warn('[Supabase Registration] Email already exists in users table:', normalizedEmail);
+        throw new Error('An account with this email address already exists. Please sign in instead.');
+      }
+    } catch (checkErr: any) {
+      if (checkErr.message?.includes('already exists')) {
+        throw checkErr;
+      }
+      console.warn('[Supabase DB Note] Pre-registration email check warning:', checkErr.message);
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(pass, salt);
-    const uid = generateUid();
+    // 2. Register user in Supabase Authentication (supabase.auth.signUp)
+    let authUser: { id: string; email: string } | null = null;
+    let authError: any = null;
+
+    if (supabaseAdmin && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.log('[Supabase Auth] Registering user via admin auth client:', normalizedEmail);
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password: pass,
+        email_confirm: true,
+        user_metadata: { full_name: name.trim(), education_level: eduLevel }
+      });
+
+      if (error) {
+        authError = error;
+      } else if (data?.user) {
+        authUser = { id: data.user.id, email: data.user.email || normalizedEmail };
+      }
+    }
+
+    if (!authUser && supabase) {
+      console.log('[Supabase Auth] Registering user via public auth client (signUp):', normalizedEmail);
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: pass,
+        options: {
+          data: { full_name: name.trim(), education_level: eduLevel }
+        }
+      });
+
+      if (error) {
+        authError = error;
+      } else if (data?.user) {
+        authUser = { id: data.user.id, email: data.user.email || normalizedEmail };
+      }
+    }
+
+    if (authError) {
+      console.error('[Supabase Auth Error]:', authError);
+      const msg = authError.message || '';
+      if (
+        msg.toLowerCase().includes('already registered') ||
+        msg.toLowerCase().includes('already in use') ||
+        msg.toLowerCase().includes('already exists') ||
+        authError.status === 422 ||
+        authError.code === 'user_already_exists'
+      ) {
+        throw new Error('An account with this email address already exists. Please sign in instead.');
+      }
+      throw new Error(msg || 'Failed to register user in Supabase Authentication.');
+    }
+
+    if (!authUser) {
+      throw new Error('Failed to create user account in Supabase Authentication.');
+    }
+
+    console.log('[Supabase Auth Success] Created user in Supabase Auth:', authUser.id, authUser.email);
+
     const now = new Date().toISOString();
 
-    // Insert user into Supabase table 'users'
-    const { data: insertedUser, error } = await client
-      .from('users')
-      .insert([
-        {
-          uid,
-          name: name.trim(),
-          email: normalizedEmail,
-          password_hash: passwordHash,
-          education_level: eduLevel,
-          created_at: now,
-          last_login_at: now,
-        }
-      ])
-      .select()
-      .single();
+    // 3. Upsert into Supabase "profiles" table with Auth UUID as primary key
+    const profileRow = {
+      id: authUser.id,
+      user_id: authUser.id,
+      full_name: name.trim(),
+      email: normalizedEmail,
+      education_level: eduLevel,
+      created_at: now,
+      last_login_at: now
+    };
 
-    if (error) {
-      console.error('Supabase user creation error:', error);
-      // Fallback or throw error if table missing
-    } else if (insertedUser) {
-      const token = jwt.sign(
-        { uid: insertedUser.uid, email: insertedUser.email, name: insertedUser.name, educationLevel: insertedUser.education_level },
-        JWT_SECRET,
-        { expiresIn: '30d' }
-      );
+    const { error: profileError } = await client
+      .from('profiles')
+      .upsert([profileRow], { onConflict: 'id' });
 
-      return {
-        token,
-        user: {
-          uid: insertedUser.uid,
-          name: insertedUser.name,
-          email: insertedUser.email,
-          educationLevel: insertedUser.education_level,
-          createdAt: insertedUser.created_at,
-          lastLoginAt: insertedUser.last_login_at,
-        }
-      };
+    if (profileError) {
+      console.error('[Supabase DB Error] Failed to upsert profile record:', profileError);
+    } else {
+      console.log('[Supabase DB Success] Profile record created in profiles table for user:', authUser.id);
     }
+
+    // 4. Upsert into "users" table for compatibility
+    const userRow = {
+      id: authUser.id,
+      uid: authUser.id,
+      name: name.trim(),
+      email: normalizedEmail,
+      password_hash: 'supabase_auth_managed',
+      education_level: eduLevel,
+      created_at: now,
+      last_login_at: now
+    };
+
+    const { error: userError } = await client
+      .from('users')
+      .upsert([userRow], { onConflict: 'id' });
+
+    if (userError) {
+      console.warn('[Supabase DB Note] Users table insert note:', userError.message);
+    } else {
+      console.log('[Supabase DB Success] User record created in users table for user:', authUser.id);
+    }
+
+    const token = jwt.sign(
+      { uid: authUser.id, email: authUser.email, name: name.trim(), educationLevel: eduLevel },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    return {
+      token,
+      user: {
+        uid: authUser.id,
+        name: name.trim(),
+        email: authUser.email,
+        educationLevel: eduLevel,
+        createdAt: now,
+        lastLoginAt: now
+      }
+    };
   }
 
-  // PostgreSQL Database fallback/primary connection
+  // Fallback to PostgreSQL database if Supabase env is not configured
   const existingUsers = await db.select().from(users).where(eq(users.email, normalizedEmail));
   if (existingUsers.length > 0) {
     throw new Error('An account with this email address already exists. Please sign in instead.');
@@ -91,7 +197,6 @@ export async function registerUserInDb(name: string, email: string, pass: string
 
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash(pass, salt);
-
   const uid = generateUid();
   const now = new Date();
 
@@ -124,57 +229,136 @@ export async function registerUserInDb(name: string, email: string, pass: string
   };
 }
 
-// Login user from database (Supabase or PostgreSQL)
+// Login user using Supabase Auth + Update last_login_at in Supabase Database
 export async function loginUserInDb(email: string, pass: string) {
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Check Supabase if configured
+  if (!normalizedEmail || !pass) {
+    throw new Error('Please enter both email and password.');
+  }
+
   if (isSupabaseConfigured() && (supabaseAdmin || supabase)) {
     const client = supabaseAdmin || supabase!;
 
-    const { data: supUsers } = await client
-      .from('users')
-      .select('*')
-      .eq('email', normalizedEmail);
+    console.log('[Supabase Auth] Attempting sign in for email:', normalizedEmail);
 
-    if (supUsers && supUsers.length > 0) {
-      const uRecord = supUsers[0];
-      const isMatch = await bcrypt.compare(pass, uRecord.password_hash);
-      if (!isMatch) {
-        throw new Error('Invalid email or password. Please check your credentials.');
+    let authUser: { id: string; email: string; user_metadata?: any } | null = null;
+    let authError: any = null;
+
+    if (supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: pass
+      });
+
+      if (error) {
+        authError = error;
+      } else if (data?.user) {
+        authUser = {
+          id: data.user.id,
+          email: data.user.email || normalizedEmail,
+          user_metadata: data.user.user_metadata
+        };
       }
-
-      const now = new Date().toISOString();
-      await client.from('users').update({ last_login_at: now }).eq('uid', uRecord.uid);
-
-      const token = jwt.sign(
-        { uid: uRecord.uid, email: uRecord.email, name: uRecord.name, educationLevel: uRecord.education_level },
-        JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-
-      return {
-        token,
-        user: {
-          uid: uRecord.uid,
-          name: uRecord.name,
-          email: uRecord.email,
-          educationLevel: uRecord.education_level,
-          createdAt: uRecord.created_at,
-          lastLoginAt: now,
-        }
-      };
     }
+
+    if (!authUser && supabaseAdmin) {
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: pass
+      });
+
+      if (error) {
+        authError = error;
+      } else if (data?.user) {
+        authUser = {
+          id: data.user.id,
+          email: data.user.email || normalizedEmail,
+          user_metadata: data.user.user_metadata
+        };
+      }
+    }
+
+    if (authError || !authUser) {
+      console.error('[Supabase Auth Error] Login failed:', authError?.message || 'Invalid credentials');
+      throw new Error('Invalid email or password. Please check your credentials.');
+    }
+
+    console.log('[Supabase Auth Success] Authenticated user:', authUser.id, authUser.email);
+
+    const now = new Date().toISOString();
+
+    // Update last_login_at in "profiles" and "users" tables
+    const { error: profileUpdateErr } = await client
+      .from('profiles')
+      .update({ last_login_at: now })
+      .eq('id', authUser.id);
+
+    if (profileUpdateErr) {
+      console.warn('[Supabase DB Note] Update profiles last_login_at note:', profileUpdateErr.message);
+    } else {
+      console.log('[Supabase DB Success] Updated last_login_at in profiles table for:', authUser.id, 'at', now);
+    }
+
+    await client
+      .from('users')
+      .update({ last_login_at: now })
+      .eq('id', authUser.id);
+
+    // Fetch user details from profiles table
+    let userName = authUser.user_metadata?.full_name || authUser.email.split('@')[0];
+    let eduLevel = authUser.user_metadata?.education_level || 'graduation';
+    let createdAt = now;
+
+    const { data: profiles } = await client
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id);
+
+    if (profiles && profiles.length > 0) {
+      userName = profiles[0].full_name || userName;
+      eduLevel = profiles[0].education_level || eduLevel;
+      createdAt = profiles[0].created_at || now;
+    } else {
+      // Ensure profile row exists if missing
+      console.log('[Supabase DB] Profile missing during login, auto-creating row for:', authUser.id);
+      await client.from('profiles').upsert([{
+        id: authUser.id,
+        user_id: authUser.id,
+        full_name: userName,
+        email: authUser.email,
+        education_level: eduLevel,
+        created_at: now,
+        last_login_at: now
+      }], { onConflict: 'id' });
+    }
+
+    const token = jwt.sign(
+      { uid: authUser.id, email: authUser.email, name: userName, educationLevel: eduLevel },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    return {
+      token,
+      user: {
+        uid: authUser.id,
+        name: userName,
+        email: authUser.email,
+        educationLevel: eduLevel,
+        createdAt,
+        lastLoginAt: now
+      }
+    };
   }
 
-  // Check PostgreSQL Database
+  // Fallback to PostgreSQL database
   const existingUsers = await db.select().from(users).where(eq(users.email, normalizedEmail));
   if (existingUsers.length === 0) {
     throw new Error('Invalid email or password. Please check your credentials.');
   }
 
   const userRecord = existingUsers[0];
-
   const isMatch = await bcrypt.compare(pass, userRecord.passwordHash);
   if (!isMatch) {
     throw new Error('Invalid email or password. Please check your credentials.');
@@ -204,7 +388,7 @@ export async function loginUserInDb(email: string, pass: string) {
   };
 }
 
-// Verify token
+// Verify JWT token
 export function verifyUserToken(token: string): UserPayload {
   return jwt.verify(token, JWT_SECRET) as UserPayload;
 }
@@ -307,4 +491,70 @@ export async function loadProfileFromDb(userId: string) {
   const profiles = await db.select().from(studentProfiles).where(eq(studentProfiles.userId, userId));
   if (profiles.length === 0) return null;
   return profiles[0];
+}
+
+// Seed initial JSON user data into Supabase if configured
+export async function seedDataToSupabase() {
+  if (!isSupabaseConfigured() || (!supabaseAdmin && !supabase)) {
+    return { success: false, message: 'Supabase credentials not configured in environment variables.' };
+  }
+
+  const client = supabaseAdmin || supabase!;
+
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const usersPath = path.join(process.cwd(), 'supabase_users.json');
+    const profilesPath = path.join(process.cwd(), 'supabase_student_profiles.json');
+
+    if (!fs.existsSync(usersPath)) {
+      return { success: false, message: 'supabase_users.json file not found' };
+    }
+
+    const usersData = JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
+    const profilesData = fs.existsSync(profilesPath) ? JSON.parse(fs.readFileSync(profilesPath, 'utf-8')) : [];
+
+    // Seed into profiles table
+    const formattedProfiles = usersData.map((u: any) => ({
+      id: u.uid.startsWith('usr_') ? '00000000-0000-0000-0000-' + u.uid.substring(4, 16).padStart(12, '0') : u.uid,
+      user_id: u.uid.startsWith('usr_') ? '00000000-0000-0000-0000-' + u.uid.substring(4, 16).padStart(12, '0') : u.uid,
+      full_name: u.name,
+      email: u.email,
+      education_level: u.education_level || 'graduation',
+      created_at: u.created_at || new Date().toISOString(),
+      last_login_at: u.last_login_at || new Date().toISOString(),
+    }));
+
+    const { data: insertedProfiles, error: profileError } = await client
+      .from('profiles')
+      .upsert(formattedProfiles, { onConflict: 'id' })
+      .select();
+
+    if (profileError) {
+      console.error('Error seeding profiles to Supabase:', profileError);
+    }
+
+    // Seed into users table
+    const { data: insertedUsers, error: userError } = await client
+      .from('users')
+      .upsert(usersData.map((u: any) => ({
+        ...u,
+        id: u.uid.startsWith('usr_') ? '00000000-0000-0000-0000-' + u.uid.substring(4, 16).padStart(12, '0') : u.uid
+      })), { onConflict: 'id' })
+      .select();
+
+    if (userError) {
+      console.error('Error seeding users to Supabase:', userError);
+    }
+
+    return {
+      success: true,
+      message: 'Successfully seeded user registration data to Supabase profiles and users tables!',
+      insertedCount: insertedProfiles?.length || insertedUsers?.length || usersData.length
+    };
+  } catch (err: any) {
+    console.error('Exception during Supabase seeding:', err);
+    return { success: false, error: err.message };
+  }
 }
